@@ -1,0 +1,421 @@
+---
+title: "DVProjFinal"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+library(colourpicker)
+library(dygraphs)
+library(dplyr)
+airqualitydata1 <- read.csv("C:/Users/HP/Desktop/airqualitydata1.csv", sep=";")
+aqdata <- airqualitydata1
+view(aqdata)
+aqdatac <- na.omit(aqdata)
+
+
+
+Air Gases - 1
+===
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Scatterplot
+
+{r}
+library(plotly)
+library(dplyr)
+filtered_data <- aqdata %>% filter(NO2 > 100 & SO2 > 100)
+sc <- plot_ly(filtered_data, x = ~NO2, y = ~SO2, mode = "markers", type = "scatter", marker = list(color = ~SO2, colorscale = "Viridis"))
+sc <- sc %>% layout(
+  title = "NO2 vs. SO2 Scatter Plot (Values > 100)",
+  xaxis = list(title = "NO2"),
+  yaxis = list(title = "SO2")
+)
+sc
+
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### 3D Scatterplot
+
+{r}
+library(plotly)
+scatter_3d <- plot_ly(
+  aqdata,
+  x = ~CO,
+  y = ~SO2,
+  z = ~O3,
+  type = "scatter3d",
+  mode = "markers",  
+  text = ~City,
+  marker = list(size = ~NOx/25, color = ~NO)
+)
+scatter_3d <- scatter_3d %>% layout(
+  title = "3D Scatter Plot of CO, SO2, and O3",
+  scene = list(
+    xaxis = list(title = "CO"),
+    yaxis = list(title = "SO2"),
+    zaxis = list(title = "O3")
+  )
+)
+scatter_3d
+
+
+
+
+Air Gases - 2
+===
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Bubble Chart
+
+{r}
+
+bubble_chart <- plot_ly(data = aqdatac, x = ~CO, y = ~NH3, marker = list(size = ~SO2/5),
+                        type = "scatter", mode = "markers", text = ~paste("SO2: ", SO2))
+bubble_chart <- bubble_chart %>% layout(
+  title = "Bubble Chart of CO, NH3, and SO2",
+  xaxis = list(title = "CO"),
+  yaxis = list(title = "NH3")
+)
+bubble_chart
+
+
+Column {data-width=500}
+--------------------------------------------------------
+### Heatmap for Gases 
+
+
+{r}
+library(plotly)
+subset_data <- aqdatac[, c("NO", "NO2", "NOx","SO2", "CO","NH3")]
+correlation_matrix <- cor(subset_data)
+heatmap_plot <- plot_ly(
+  z = correlation_matrix,
+  type = "heatmap",
+  colorscale = "Viridis", 
+  colorbar = list(title = "Correlation"),
+  x = colnames(correlation_matrix),
+  y = colnames(correlation_matrix)
+)
+layout(heatmap_plot, title = "Correlation Heatmap of Toxic Gases")
+
+# Display the heatmap
+heatmap_plot
+
+
+
+
+Air Gases - 3
+===
+Column {data-width=500}
+----------------------------------------------------------------
+### Contour Map
+{r}
+fig <- plot_ly(aqdata, x = ~NH3, y = ~CO, z = ~SO2) 
+fig <- fig %>%
+  add_trace(
+    type = 'histogram2dcontour',
+    contours = list(
+      showlabels = TRUE,
+      labelfont = list(
+        family = 'Raleway'
+      )
+    ),
+    hoverlabel = list(
+      font = list(
+        family = 'Raleway'
+      )
+    )
+  )
+fig <- fig %>% layout(
+  title = 'Ammonia and Carbon Monoxide Levels',
+  legend = list(x = 0.029, y = 1.038, font = list(size = 13)),
+  font = list(color = "000000"),
+  xaxis = list(showgrid = FALSE, tickfont = list(color = "#000000")),
+  yaxis = list(showgrid = FALSE, tickfont = list(color = "#000000")),
+  margin = list(l = 100, r = 20, t = 70, b = 70)
+)
+
+fig
+
+
+
+
+Column {data-width=500}
+---------------------------------------------------------------
+### 3-variable scatterplot
+{r}
+p3 <- plot_ly(data = aqdata,
+              x = ~O3,
+              y = ~NH3,
+              color = ~AQI,
+              type = "scatter",
+              mode = "markers",
+              marker = list(size = 10)) %>% 
+  layout(title = "Correlation between Ozone and Ammonia",
+         xaxis = list(title = "Ozone",
+                      zeroline = FALSE),
+         yaxis = list(title = "Ammonia",
+                      zeroline = FALSE))
+p3
+
+City-wise Vis
+===
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Pie chart
+
+{r}
+pie_chart <- plot_ly(
+  labels = aqdatac$City,
+  values = aqdatac$PM2.5,
+  type = "pie",
+  textinfo = "percent+label"
+)
+
+# Customize the layout
+pie_chart <- pie_chart %>% layout(
+  title = "PM Percentage by City",
+  showlegend = TRUE
+)
+
+# Show the pie chart
+pie_chart
+
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Line chart
+
+{r}
+max_values <- aqdatac %>% 
+  group_by(City) %>% 
+  summarize(
+    Max_NO2 = max(NO2),
+    Max_NOx = max(NOx),
+    Max_SO2 = max(SO2),
+    Max_O3 = max(O3)
+  )
+
+
+line_chart <- plot_ly(data = max_values, y = ~Max_NO2, x = ~City, type = "scatter", mode = "lines", name = "Max NO2") %>%
+  add_trace(y = ~Max_NOx, x = ~City, mode = "lines", name = "Max NOx") %>%
+  add_trace(y = ~Max_SO2, x = ~City, mode = "lines", name = "Max SO2") %>%
+  add_trace(y = ~Max_O3, x = ~City, mode = "lines", name = "Max O3")
+
+line_chart <- line_chart %>% layout(
+  title = "Max Air Quality by City",
+  xaxis = list(title = "Concentration"),
+  yaxis = list(title = "Cities"),
+  legend = list(orientation = "v")
+)
+line_chart
+
+
+City-wise Vis - 2
+===
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Stacked bar chart
+
+{r}
+library(plotly)
+plot_data <- aqdatac %>%
+  group_by(City) %>%
+  summarise(avg_NO = mean(NO),
+            avg_NO2 = mean(NO2),
+            avg_NOx = mean(NOx))
+
+plot_data_long <- tidyr::pivot_longer(plot_data, cols = c(avg_NO, avg_NO2, avg_NOx), names_to = "Gas")
+
+plot <- plot_ly(data = plot_data_long, x = ~City, y = ~value, type = "bar", color = ~Gas)
+
+plot <- plot %>%
+  layout(title = "Stacked Bar Chart of Gas Values (NO, NO2, NOx) by City",
+         xaxis = list(title = "City"),
+         yaxis = list(title = "Average Value"))
+
+plot
+
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Ternary Plot
+
+{r}
+library(ggtern)
+library(plotly)
+ternary_plot <- ggtern(data = aqdatac, aes(x = Benzene, y = Toluene, z = Xylene)) +
+  geom_point(aes(color = City)) +
+  labs(title = "Ternary Plot of Pollutant Composition by City", x = "Benzene", y = "Toluene", z = "Xylene") +
+  theme(tern.axis.title = element_text(size = 5))
+interactive_plot <- ggplotly(ternary_plot)
+
+# Display the interactive plot
+interactive_plot
+
+
+
+BTX Isomer Vis
+===
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Grouped bar chart
+
+{r}
+bar_chart <- plot_ly(aqdatac, x = ~AQI_Bucket, y = ~Benzene, name = "Benzene", type = "bar") %>%
+  add_trace(x = ~AQI_Bucket, y = ~Toluene, name = "Toluene", type = "bar") %>%
+  add_trace(x = ~AQI_Bucket, y = ~Xylene, name = "Xylene", type = "bar")
+
+# Customize the layout
+bar_chart <- bar_chart %>% layout(
+  title = "Benzene, Toluene, and Xylene by AQI Bucket",
+  xaxis = list(title = "AQI Bucket"),
+  yaxis = list(title = "Concentration"),
+  barmode = "group"
+)
+
+# Show the grouped bar chart
+bar_chart
+
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Heatmap
+
+{r}
+library(plotly)
+subset_data <- aqdatac[, c("PM10", "PM2.5","Benzene", "Xylene", "Toluene")]
+correlation_matrix <- cor(subset_data)
+heatmap_plot <- plot_ly(
+  z = correlation_matrix,
+  type = "heatmap",
+  colorscale = "Viridis",  # You can choose a different color scale
+  colorbar = list(title = "Correlation"),
+  x = colnames(correlation_matrix),
+  y = colnames(correlation_matrix)
+)
+layout(heatmap_plot, title = "Correlation Heatmap of Particulate Matter and Pollutants")
+
+# Display the heatmap
+heatmap_plot
+
+
+
+
+
+Particulate Matter Vis
+===
+Column {data-width=500}
+-------------------------------------
+
+
+### Stacked Area Chart
+
+{r}
+library(plotly)
+
+fig <- plot_ly(data = aqdatac, x = ~City) %>%
+  add_trace(y = ~PM2.5, type = 'scatter', mode = 'lines', stackgroup = 'one', name = 'PM2.5') %>%
+  add_trace(y = ~PM10, type = 'scatter', mode = 'lines', stackgroup = 'one', name = 'PM10') %>%
+  layout(title = 'Stacked Area Chart for PM2.5 and PM10 Trends Across Cities', 
+         xaxis = list(title = 'City'), yaxis = list(title = 'Concentration (µg/m³)'))
+
+fig
+
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+
+### Boxplots for AQI Buckets
+
+{r}
+library(plotly)
+library(dplyr)
+plot_data <- aqdatac %>%
+  select(PM2.5, AQI_Bucket)
+plot <- plot_ly(data = plot_data, x = ~AQI_Bucket, y = ~PM2.5, type = "box")
+plot <- plot %>% layout(
+  title = "Boxplot of Particulate Matter",
+  xaxis = list(title = "AQI Bucket"),
+  yaxis = list(title = "PM2.5")
+)
+plot
+
+
+
+AQI Vis
+===
+
+Column {data-width=500,}
+-----------------------------------------------------------------------
+### Violin Plot for AQI Bucket
+{r}
+library(plotly)
+aqdata <- na.omit(aqdata)
+fig <- aqdata %>%
+  plot_ly(
+    x = ~AQI_Bucket,
+    y = ~O3,
+    split = ~AQI_Bucket,
+    type = 'violin',
+    box = list(
+      visible = T
+    ),
+    meanline = list(
+      visible = T
+    )
+  ) 
+
+fig <- fig %>%
+  layout(
+    xaxis = list(
+      title = "AQI-bucket"
+    ),
+    yaxis = list(
+      title = "O3",
+      zeroline = F
+)
+)
+fig
+
+
+
+
+
+
+Column {data-width=500,}
+-----------------------------------------------------------------------
+### Histogram
+
+
+{r}
+library(plotly)
+histograms <- plot_ly(data = aqdatac, x = ~NH3, type = "histogram", color = ~AQI_Bucket) %>%
+  layout(
+    title = "Histogram of Ammonia by AQI Bucket",
+    xaxis = list(title = "NH3"),
+    yaxis = list(title = "Frequency"),
+    showlegend = TRUE
+  )
+
+# Show the chart
+histograms
